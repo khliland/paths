@@ -30,8 +30,13 @@
         .stats h3 { margin: 0 0 10px 0; font-size: 14px; }
         .stat-item { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
         .stat-item:last-child { border-bottom: none; }
-        .stat-label { font-size: 11px; color: #666; }
+        .stat-label { font-size: 14px; color: #666; }
         .stat-value { font-size: 14px; font-weight: bold; color: #333; }
+        .right-pane { display: flex; flex-direction: column; gap: 15px; }
+        .diagram { background: white; padding: 12px; border-radius: 8px; text-align: center; }
+        .diagram img { width: 100%; max-width: 200px; height: auto; }
+        .equations { background: white; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 1.8; }
+        .equations div { margin-bottom: 8px; }
         .loading { text-align: center; padding: 40px; font-size: 18px; }
     </style>
 </head>
@@ -42,11 +47,11 @@
         <div class="main-container">
             <div class="controls">
                 <div class="control-group">
-                    <label>θ<sub>a</sub>: <span class="slider-value" id="val_theta_a">0.50</span></label>
+                    <label>θ<sub>A</sub>: <span class="slider-value" id="val_theta_a">0.50</span></label>
                     <input type="range" id="theta_a" min="-1" max="1" step="0.01" value="0.5">
                 </div>
                 <div class="control-group">
-                    <label>θ<sub>b</sub>: <span class="slider-value" id="val_theta_b">0.40</span></label>
+                    <label>θ<sub>B</sub>: <span class="slider-value" id="val_theta_b">0.40</span></label>
                     <input type="range" id="theta_b" min="-1" max="1" step="0.01" value="0.4">
                 </div>
                 <div class="control-group">
@@ -84,12 +89,21 @@
                 <div id="plot"></div>
             </div>
             
-            <div class="stats">
-                <h3>Statistics</h3>
-                <div class="stat-item"><div class="stat-label">T (%)</div><div class="stat-value" id="stat_T">-</div></div>
-                <div class="stat-item"><div class="stat-label">U (%)</div><div class="stat-value" id="stat_U">-</div></div>
-                <div class="stat-item"><div class="stat-label">Ind (%)</div><div class="stat-value" id="stat_INT">-</div></div>
-                <div class="stat-item"><div class="stat-label">Ad (%)</div><div class="stat-value" id="stat_Ad">-</div></div>
+            <div class="right-pane">
+                <div class="stats">
+                    <h3>Contributions</h3>
+                    <div class="stat-item"><div class="stat-label">T<sub>A→C</sub></div><div class="stat-value" id="stat_T">-</div></div>
+                    <div class="stat-item"><div class="stat-label">U<sub>A→C</sub></div><div class="stat-value" id="stat_U">-</div></div>
+                    <div class="stat-item"><div class="stat-label">Ind<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT">-</div></div>
+                    <div class="stat-item"><div class="stat-label">Ad<sub>A(B)→C</sub></div><div class="stat-value" id="stat_Ad">-</div></div>
+                </div>
+                <div class="diagram">
+                    <img src="img/DAG.png" alt="Directed Acyclic Graph">
+                </div>
+                <div class="equations">
+                    <div>x<sub>C</sub> = x<sub>A</sub> θ<sub>A</sub> + x<sub>B</sub> θ<sub>B</sub> + e</div>
+                    <div>x<sub>B</sub> = x<sub>A</sub> γ + f</div>
+                </div>
             </div>
         </div>
     </div>
@@ -183,9 +197,9 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
     xc_hat_length = min(xc_hat_length, 2.0)
     
     arrows = []
-    arrows.append({'x': [0.0, 1.0], 'y': [0.0, 0.0], 'color': 'blue', 'name': 'x<sub>a</sub>', 'width': 3})
-    arrows.append({'x': [0.0, float(np.cos(angle))], 'y': [0.0, float(np.sin(angle))], 'color': 'purple', 'name': 'x<sub>b</sub>', 'width': 3})
-    arrows.append({'x': [0.0, float(np.cos(sig1 * anglec) * xc_hat_length)], 'y': [0.0, float(np.sin(sig1 * anglec) * xc_hat_length)], 'color': 'green', 'name': 'x&#770;<sub>c</sub>', 'width': 3})
+    arrows.append({'x': [0.0, 1.0], 'y': [0.0, 0.0], 'color': 'blue', 'name': 'x<sub>A</sub>', 'width': 3})
+    arrows.append({'x': [0.0, float(np.cos(angle))], 'y': [0.0, float(np.sin(angle))], 'color': 'purple', 'name': 'x<sub>B</sub>', 'width': 3})
+    arrows.append({'x': [0.0, float(np.cos(sig1 * anglec) * xc_hat_length)], 'y': [0.0, float(np.sin(sig1 * anglec) * xc_hat_length)], 'color': 'green', 'name': 'x&#770;<sub>C</sub>', 'width': 3})
     
     if regression:
         arrows.append({'x': [0.0, float(theta_a)], 'y': [0.0, 0.0], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
@@ -426,7 +440,7 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                     xaxis: { range: [-1.5, 1.5], scaleanchor: 'y', scaleratio: 1 }, 
                     yaxis: { range: [-1.2, 1.2], scaleanchor: 'x', scaleratio: 1 }, 
                     height: 500,
-                    legend: { x: 0.02, y: 0.98 }
+                    legend: { x: 0.02, y: 0.98, font: { size: 14 } }
                 };
                 Plotly.newPlot('plot', traces, layout, { responsive: true });
 
