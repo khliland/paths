@@ -355,27 +355,23 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                 document.getElementById("theta_b").addEventListener("input", updatePlot);
                 document.getElementById("gamma").addEventListener("input", updatePlot);
                 
-                document.getElementById("theta_a").addEventListener("mouseup", () => {
-                    if (!isValidPlot()) {
-                        findValidValue("theta_a");
-                    } else {
-                        saveValidState();
-                    }
-                });
-                document.getElementById("theta_b").addEventListener("mouseup", () => {
-                    if (!isValidPlot()) {
-                        findValidValue("theta_b");
-                    } else {
-                        saveValidState();
-                    }
-                });
-                document.getElementById("gamma").addEventListener("mouseup", () => {
-                    if (!isValidPlot()) {
-                        findValidValue("gamma");
-                    } else {
-                        saveValidState();
-                    }
-                });
+                // Handle validation on both mouseup and touchend
+                const attachValidationListeners = (sliderId) => {
+                    const slider = document.getElementById(sliderId);
+                    const validateOnRelease = () => {
+                        if (!isValidPlot()) {
+                            findValidValue(sliderId);
+                        } else {
+                            saveValidState();
+                        }
+                    };
+                    slider.addEventListener("mouseup", validateOnRelease);
+                    slider.addEventListener("touchend", validateOnRelease);
+                };
+                
+                attachValidationListeners("theta_a");
+                attachValidationListeners("theta_b");
+                attachValidationListeners("gamma");
                 
                 document.getElementById("regression").addEventListener("change", updatePlot);
                 document.getElementById("orthProj").addEventListener("change", updatePlot);
