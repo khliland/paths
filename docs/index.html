@@ -97,19 +97,19 @@
                 <div class="control-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="orthProj">
-                        Orth. Proj.
+                        Centered Orthogonal Projections
                     </label>
                 </div>
                 <div class="control-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="chained">
-                        Chained
+                        Chained Orthogonal Projections
                     </label>
                 </div>
                 <div class="control-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="EVs">
-                        Contributions
+                        Contribution circles
                     </label>
                 </div>
             </div>
@@ -165,19 +165,19 @@
                 <div class="control-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="orthProj_p">
-                        Orth. Proj.
+                        Centered Orthogonal Projections
                     </label>
                 </div>
                 <div class="control-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="chained_p">
-                        Chained
+                        Chained Orthogonal Projections
                     </label>
                 </div>
                 <div class="control-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="EVs_p">
-                        Contributions
+                        Contribution circles
                     </label>
                 </div>
             </div>
@@ -194,8 +194,8 @@
                     <img src="img/DAG.png" alt="Directed Acyclic Graph">
                 </div>
                 <div class="equations">
-                    <div><b>x</b><sub>C</sub> = <b>x</b><sub>A</sub> θ<sub>A</sub> + <b>x</b><sub>B</sub> θ<sub>B</sub> + <b>e</b></div>
-                    <div><b>x</b><sub>B</sub> = <b>x</b><sub>A</sub> γ + <b>f</b></div>
+                    <div><b>x</b><sub>C</sub> = <b>x</b><sub>A</sub>θ<sub>A</sub> + <b>x</b><sub>B</sub>θ<sub>B</sub> + <b>e</b></div>
+                    <div><b>x</b><sub>B</sub> = <b>x</b><sub>A</sub>γ + <b>f</b></div>
                 </div>
             </div>
         </div>
@@ -432,10 +432,28 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
         xb_proj_scale = np.sqrt(np.sum(xb_proj_xa**2)) / norm_xb_theta_b
         xb_orth_scale = np.sqrt(np.sum(xb_orth_xa**2)) / norm_xb_theta_b
         
-        arrows.append({'x': [0.0, float(sig3 * np.cos(sig2 * angle_aorthb) * xa_orth_scale * theta_a)], 'y': [0.0, float(np.sin(sig2 * angle_aorthb) * xa_orth_scale * theta_a)], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
-        arrows.append({'x': [0.0, float(sig3 * np.cos(-sig2 * angle_aprojb) * xa_proj_scale * theta_a)], 'y': [0.0, float(np.sin(-sig2 * angle_aprojb) * xa_proj_scale * theta_a)], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
-        arrows.append({'x': [0.0, float(-sig2 * np.cos(angle_bproja) * xb_proj_scale * theta_b)], 'y': [0.0, 0.0], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
-        arrows.append({'x': [0.0, float(sig3 * np.cos(angle_bortha) * xb_orth_scale * theta_b)], 'y': [0.0, float(np.sin(angle_bortha) * xb_orth_scale * theta_b)], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        xa_orth_endpoint = [float(sig3 * np.cos(sig2 * angle_aorthb) * xa_orth_scale * theta_a), float(np.sin(sig2 * angle_aorthb) * xa_orth_scale * theta_a)]
+        xa_proj_endpoint = [float(sig3 * np.cos(-sig2 * angle_aprojb) * xa_proj_scale * theta_a), float(np.sin(-sig2 * angle_aprojb) * xa_proj_scale * theta_a)]
+        xb_proj_endpoint = [float(-sig2 * np.cos(angle_bproja) * xb_proj_scale * theta_b), 0.0]
+        xb_orth_endpoint = [float(sig3 * np.cos(angle_bortha) * xb_orth_scale * theta_b), float(np.sin(angle_bortha) * xb_orth_scale * theta_b)]
+        
+        arrows.append({'x': [0.0, xa_orth_endpoint[0]], 'y': [0.0, xa_orth_endpoint[1]], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [0.0, xa_proj_endpoint[0]], 'y': [0.0, xa_proj_endpoint[1]], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [0.0, xb_proj_endpoint[0]], 'y': [0.0, xb_proj_endpoint[1]], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [0.0, xb_orth_endpoint[0]], 'y': [0.0, xb_orth_endpoint[1]], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        
+        # Add connectors if both regression and orthProj are enabled
+        if regression:
+            reg_blue_endpoint = [float(theta_a), 0.0]
+            reg_purple_endpoint = [float(theta_a), 0.0]
+            
+            # Connect regression blue to orthogonal blue components
+            arrows.append({'x': [reg_blue_endpoint[0], xa_orth_endpoint[0]], 'y': [reg_blue_endpoint[1], xa_orth_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5, 'marker': 1})
+            arrows.append({'x': [reg_blue_endpoint[0], xa_proj_endpoint[0]], 'y': [reg_blue_endpoint[1], xa_proj_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5, 'marker': 1})
+            
+            # Connect regression purple (starting where blue ends) to orthogonal purple components
+            arrows.append({'x': [reg_purple_endpoint[0], xb_proj_endpoint[0]], 'y': [reg_purple_endpoint[1], xb_proj_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5, 'marker': 1})
+            arrows.append({'x': [reg_purple_endpoint[0], xb_orth_endpoint[0]], 'y': [reg_purple_endpoint[1], xb_orth_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5, 'marker': 1})
     
     if chained:
         norm_xa_theta_a = np.sqrt(np.sum((xa * theta_a)**2))
