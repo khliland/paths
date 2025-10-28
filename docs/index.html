@@ -253,7 +253,10 @@
         function findValidValue(sliderId) {
             const slider = document.getElementById(sliderId);
             const currentValue = parseFloat(slider.value);
-            const lastValidValue = lastValidState[sliderId];
+            
+            // Normalize portrait ID to landscape ID for looking up lastValidState
+            const normalizedId = sliderId.endsWith('_p') ? sliderId.slice(0, -2) : sliderId;
+            const lastValidValue = lastValidState[normalizedId];
             
             // Binary search between lastValidValue and currentValue
             let low, high;
@@ -272,6 +275,17 @@
             for (let i = 0; i < 30; i++) {
                 const mid = (low + high) / 2;
                 slider.value = mid;
+                // Sync portrait slider to landscape if adjusting landscape slider
+                if (!sliderId.endsWith('_p')) {
+                    const portraitId = sliderId + '_p';
+                    const portraitSlider = document.getElementById(portraitId);
+                    if (portraitSlider) portraitSlider.value = mid;
+                } else {
+                    // Sync landscape slider to portrait if adjusting portrait slider
+                    const landscapeId = sliderId.slice(0, -2);
+                    const landscapeSlider = document.getElementById(landscapeId);
+                    if (landscapeSlider) landscapeSlider.value = mid;
+                }
                 updatePlot();
                 
                 if (isValidPlot()) {
@@ -299,6 +313,16 @@
             
             // Set to the valid value found
             slider.value = validValue;
+            // Sync the other slider too
+            if (!sliderId.endsWith('_p')) {
+                const portraitId = sliderId + '_p';
+                const portraitSlider = document.getElementById(portraitId);
+                if (portraitSlider) portraitSlider.value = validValue;
+            } else {
+                const landscapeId = sliderId.slice(0, -2);
+                const landscapeSlider = document.getElementById(landscapeId);
+                if (landscapeSlider) landscapeSlider.value = validValue;
+            }
             updatePlot();
             saveValidState();
         }
@@ -483,6 +507,11 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                 attachValidationListeners("theta_a");
                 attachValidationListeners("theta_b");
                 attachValidationListeners("gamma");
+                
+                // Also attach validation to portrait sliders
+                attachValidationListeners("theta_a_p");
+                attachValidationListeners("theta_b_p");
+                attachValidationListeners("gamma_p");
                 
                 document.getElementById("regression").addEventListener("change", updatePlot);
                 document.getElementById("orthProj").addEventListener("change", updatePlot);
