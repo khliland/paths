@@ -16,7 +16,7 @@
         .main-container { display: grid; grid-template-columns: 280px auto 200px; gap: 15px; justify-content: start; }
         .controls { background: white; padding: 15px; border-radius: 8px; height: fit-content; }
         .control-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
+        label { display: block; margin-bottom: 5px; font-weight: normal; font-size: 13px; }
         input[type="range"] { width: 100%; margin: 5px 0; height: 6px; -webkit-appearance: none; appearance: none; background: rgba(0, 137, 123, 0.3); border-radius: 5px; outline: none; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #00897b; cursor: pointer; box-shadow: 0 2px 5px rgba(0,137,123,0.3); }
         input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #00897b; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,137,123,0.3); }
@@ -101,8 +101,8 @@
                     <img src="img/DAG.png" alt="Directed Acyclic Graph">
                 </div>
                 <div class="equations">
-                    <div>x<sub>C</sub> = x<sub>A</sub> θ<sub>A</sub> + x<sub>B</sub> θ<sub>B</sub> + e</div>
-                    <div>x<sub>B</sub> = x<sub>A</sub> γ + f</div>
+                    <div><b>x</b><sub>C</sub> = <b>x</b><sub>A</sub> θ<sub>A</sub> + <b>x</b><sub>B</sub> θ<sub>B</sub> + <b>e</b></div>
+                    <div><b>x</b><sub>B</sub> = <b>x</b><sub>A</sub> γ + <b>f</b></div>
                 </div>
             </div>
         </div>
@@ -110,6 +110,87 @@
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.0/full/pyodide.js"></script>
     <script>
         let pyodide = null;
+        let lastValidState = { theta_a: 0.5, theta_b: 0.4, gamma: 0.3 };
+
+        function isValidPlot() {
+            // Check if any statistics value is NaN
+            const stats = ['stat_T', 'stat_U', 'stat_INT', 'stat_Ad'];
+            for (const statId of stats) {
+                const text = document.getElementById(statId).textContent;
+                if (text.includes('NaN') || text === '-') {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function saveValidState() {
+            lastValidState = {
+                theta_a: parseFloat(document.getElementById("theta_a").value),
+                theta_b: parseFloat(document.getElementById("theta_b").value),
+                gamma: parseFloat(document.getElementById("gamma").value)
+            };
+        }
+
+        function revertToLastValid() {
+            document.getElementById("theta_a").value = lastValidState.theta_a;
+            document.getElementById("theta_b").value = lastValidState.theta_b;
+            document.getElementById("gamma").value = lastValidState.gamma;
+            updatePlot();
+        }
+
+        function findValidValue(sliderId) {
+            const slider = document.getElementById(sliderId);
+            const currentValue = parseFloat(slider.value);
+            const lastValidValue = lastValidState[sliderId];
+            
+            // Binary search between lastValidValue and currentValue
+            let low, high;
+            if (currentValue > lastValidValue) {
+                low = lastValidValue;
+                high = currentValue;
+            } else {
+                low = currentValue;
+                high = lastValidValue;
+            }
+            
+            // Binary search for the boundary
+            let validValue = lastValidValue;
+            
+            // Iterate until we narrow down to acceptable precision
+            for (let i = 0; i < 30; i++) {
+                const mid = (low + high) / 2;
+                slider.value = mid;
+                updatePlot();
+                
+                if (isValidPlot()) {
+                    validValue = mid;
+                    // Move towards the direction we were going
+                    if (currentValue > lastValidValue) {
+                        low = mid;
+                    } else {
+                        high = mid;
+                    }
+                } else {
+                    // Move away from this invalid point
+                    if (currentValue > lastValidValue) {
+                        high = mid;
+                    } else {
+                        low = mid;
+                    }
+                }
+                
+                // Stop when precision is good enough (0.01 step)
+                if (Math.abs(high - low) < 0.005) {
+                    break;
+                }
+            }
+            
+            // Set to the valid value found
+            slider.value = validValue;
+            updatePlot();
+            saveValidState();
+        }
 
         async function initPython() {
             try {
@@ -181,11 +262,11 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
     A_EV = np.sum(xb_orth_xa**2) / C_EV
     C_hat_EV = np.sum(xc_hat**2) / C_EV
     
-    angle = np.arccos(np.dot(xa, xb) / (np.linalg.norm(xa) * np.linalg.norm(xb)))
-    anglec = np.arccos(np.dot(xa, xc_hat) / (np.linalg.norm(xa) * np.linalg.norm(xc_hat)))
-    angle_aorthb = np.arccos(np.dot(xa, xa_orth_xb) / (np.linalg.norm(xa) * np.linalg.norm(xa_orth_xb)))
-    angle_aprojb = np.arccos(np.dot(xa, xa_proj_xb) / (np.linalg.norm(xa) * np.linalg.norm(xa_proj_xb)))
-    angle_bortha = np.arccos(np.dot(xa, xb_orth_xa) / (np.linalg.norm(xa) * np.linalg.norm(xb_orth_xa)))
+    angle = np.arccos(np.clip(np.dot(xa, xb) / (np.linalg.norm(xa) * np.linalg.norm(xb)), -1.0, 1.0))
+    anglec = np.arccos(np.clip(np.dot(xa, xc_hat) / (np.linalg.norm(xa) * np.linalg.norm(xc_hat)), -1.0, 1.0))
+    angle_aorthb = np.arccos(np.clip(np.dot(xa, xa_orth_xb) / (np.linalg.norm(xa) * np.linalg.norm(xa_orth_xb)), -1.0, 1.0))
+    angle_aprojb = np.arccos(np.clip(np.dot(xa, xa_proj_xb) / (np.linalg.norm(xa) * np.linalg.norm(xa_proj_xb)), -1.0, 1.0))
+    angle_bortha = np.arccos(np.clip(np.dot(xa, xb_orth_xa) / (np.linalg.norm(xa) * np.linalg.norm(xb_orth_xa)), -1.0, 1.0))
     angle_bproja = 0
     
     sig1 = 1 if theta_b > 0 else -1
@@ -197,9 +278,9 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
     xc_hat_length = min(xc_hat_length, 2.0)
     
     arrows = []
-    arrows.append({'x': [0.0, 1.0], 'y': [0.0, 0.0], 'color': 'blue', 'name': 'x<sub>A</sub>', 'width': 3})
-    arrows.append({'x': [0.0, float(np.cos(angle))], 'y': [0.0, float(np.sin(angle))], 'color': 'purple', 'name': 'x<sub>B</sub>', 'width': 3})
-    arrows.append({'x': [0.0, float(np.cos(sig1 * anglec) * xc_hat_length)], 'y': [0.0, float(np.sin(sig1 * anglec) * xc_hat_length)], 'color': 'green', 'name': 'x&#770;<sub>C</sub>', 'width': 3})
+    arrows.append({'x': [0.0, 1.0], 'y': [0.0, 0.0], 'color': 'blue', 'name': '<b>x</b><sub>A</sub>', 'width': 3})
+    arrows.append({'x': [0.0, float(np.cos(angle))], 'y': [0.0, float(np.sin(angle))], 'color': 'purple', 'name': '<b>x</b><sub>B</sub>', 'width': 3})
+    arrows.append({'x': [0.0, float(np.cos(sig1 * anglec) * xc_hat_length)], 'y': [0.0, float(np.sin(sig1 * anglec) * xc_hat_length)], 'color': 'green', 'name': '<b>x&#770;</b><sub>C</sub>', 'width': 3})
     
     if regression:
         arrows.append({'x': [0.0, float(theta_a)], 'y': [0.0, 0.0], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
@@ -273,6 +354,29 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                 document.getElementById("theta_a").addEventListener("input", updatePlot);
                 document.getElementById("theta_b").addEventListener("input", updatePlot);
                 document.getElementById("gamma").addEventListener("input", updatePlot);
+                
+                document.getElementById("theta_a").addEventListener("mouseup", () => {
+                    if (!isValidPlot()) {
+                        findValidValue("theta_a");
+                    } else {
+                        saveValidState();
+                    }
+                });
+                document.getElementById("theta_b").addEventListener("mouseup", () => {
+                    if (!isValidPlot()) {
+                        findValidValue("theta_b");
+                    } else {
+                        saveValidState();
+                    }
+                });
+                document.getElementById("gamma").addEventListener("mouseup", () => {
+                    if (!isValidPlot()) {
+                        findValidValue("gamma");
+                    } else {
+                        saveValidState();
+                    }
+                });
+                
                 document.getElementById("regression").addEventListener("change", updatePlot);
                 document.getElementById("orthProj").addEventListener("change", updatePlot);
                 document.getElementById("chained").addEventListener("change", updatePlot);
@@ -280,6 +384,7 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
 
                 console.log("Event listeners attached, calling updatePlot...");
                 updatePlot();
+                saveValidState();
             } catch (error) {
                 console.error("Error during initialization:", error);
                 document.getElementById('loading').innerHTML = '<div style="color: red; padding: 20px;"><strong>Error:</strong> ' + error.message + '<br><br><pre style="text-align: left; background: #f0f0f0; padding: 10px;">' + error.stack + '</pre></div>';
@@ -437,8 +542,8 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
 
                 const layout = { 
                     title: '', 
-                    xaxis: { range: [-1.5, 1.5], scaleanchor: 'y', scaleratio: 1 }, 
-                    yaxis: { range: [-1.2, 1.2], scaleanchor: 'x', scaleratio: 1 }, 
+                    xaxis: { range: [-1.2, 1.2], scaleanchor: 'y', scaleratio: 1 }, 
+                    yaxis: { range: [-1.2, 1.2] }, 
                     height: 500,
                     margin: { l: 50, r: 30, t: 50, b: 30 },
                     legend: { x: 0.02, y: 0.98, font: { size: 14 } }
