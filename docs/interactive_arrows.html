@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Path Effects</title>
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.26.0/dist/plotly.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 20px; }
+        .main-container { display: grid; grid-template-columns: 280px 1fr 200px; gap: 15px; }
+        .controls { background: white; padding: 15px; border-radius: 8px; height: fit-content; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
+        input[type="range"] { width: 100%; margin: 5px 0; height: 6px; -webkit-appearance: none; appearance: none; background: rgba(0, 137, 123, 0.3); border-radius: 5px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #00897b; cursor: pointer; box-shadow: 0 2px 5px rgba(0,137,123,0.3); }
+        input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #00897b; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,137,123,0.3); }
+        input[type="range"]::-moz-range-track { background: transparent; border: none; }
+        input[type="checkbox"] { margin-right: 8px; }
+        .slider-value { font-size: 12px; color: #666; margin-left: 10px; }
+        .checkbox-label { display: flex; align-items: center; margin-bottom: 8px; font-weight: normal; }
+        .plot-container { background: white; padding: 15px; border-radius: 8px; }
+        #plot { width: 100%; height: 500px; }
+        .stats { background: white; padding: 12px; border-radius: 8px; font-size: 12px; }
+        .stats h3 { margin: 0 0 10px 0; font-size: 14px; }
+        .stat-item { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+        .stat-item:last-child { border-bottom: none; }
+        .stat-label { font-size: 11px; color: #666; }
+        .stat-value { font-size: 14px; font-weight: bold; color: #333; }
+        .loading { text-align: center; padding: 40px; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <h1>Path Contributions</h1>
+    <div class="loading" id="loading">Loading...</div>
+    <div id="main" style="display: none;">
+        <div class="main-container">
+            <div class="controls">
+                <div class="control-group">
+                    <label>θ<sub>a</sub>: <span class="slider-value" id="val_theta_a">0.50</span></label>
+                    <input type="range" id="theta_a" min="-1" max="1" step="0.01" value="0.5">
+                </div>
+                <div class="control-group">
+                    <label>θ<sub>b</sub>: <span class="slider-value" id="val_theta_b">0.40</span></label>
+                    <input type="range" id="theta_b" min="-1" max="1" step="0.01" value="0.4">
+                </div>
+                <div class="control-group">
+                    <label>γ: <span class="slider-value" id="val_gamma">0.30</span></label>
+                    <input type="range" id="gamma" min="-1" max="1" step="0.01" value="0.3">
+                </div>
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+                <div class="control-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="regression">
+                        Regression
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="orthProj">
+                        Orth. Proj.
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="chained">
+                        Chained
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="EVs">
+                        Contributions
+                    </label>
+                </div>
+            </div>
+            
+            <div class="plot-container">
+                <div id="plot"></div>
+            </div>
+            
+            <div class="stats">
+                <h3>Statistics</h3>
+                <div class="stat-item"><div class="stat-label">T (%)</div><div class="stat-value" id="stat_T">-</div></div>
+                <div class="stat-item"><div class="stat-label">U (%)</div><div class="stat-value" id="stat_U">-</div></div>
+                <div class="stat-item"><div class="stat-label">Ind (%)</div><div class="stat-value" id="stat_INT">-</div></div>
+                <div class="stat-item"><div class="stat-label">Ad (%)</div><div class="stat-value" id="stat_Ad">-</div></div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.0/full/pyodide.js"></script>
+    <script>
+        let pyodide = null;
+
+        async function initPython() {
+            try {
+                console.log("Starting Pyodide initialization...");
+                pyodide = await loadPyodide();
+                console.log("Pyodide loaded successfully");
+                
+                console.log("Loading NumPy...");
+                await pyodide.loadPackage("numpy");
+                console.log("NumPy loaded successfully");
+
+                const pythonCode = `
+import numpy as np
+
+def generate_data(n, theta_a, theta_b, gamma):
+    np.random.seed(42)
+    X = np.random.randn(n, 4)
+    U, _, _ = np.linalg.svd(X - X.mean(axis=0), full_matrices=False)
+    xa = U[:, 0] / np.std(U[:, 0])
+    f = U[:, 1] / np.std(U[:, 1])
+    e = U[:, 2] / np.std(U[:, 2])
+    std_xa_gamma = np.std(xa * gamma)
+    std_f = np.sqrt(1 - std_xa_gamma**2)
+    xb = xa * gamma + f * std_f
+    std_xa_theta_a_xb_theta_b = np.std(xa * theta_a + xb * theta_b)
+    std_e = np.sqrt(1 - std_xa_theta_a_xb_theta_b**2)
+    xc = xa * theta_a + xb * theta_b + e * std_e
+    return xa, xb, xc, e * std_e
+
+def proj(y, x):
+    # Handle 1D arrays by converting to column vectors
+    if len(x.shape) == 1:
+        x = x.reshape(-1, 1)
+    if len(y.shape) == 1:
+        y = y.reshape(-1, 1)
+    # Now compute: x @ inv(x.T @ x) @ x.T @ y
+    XtX_inv = np.linalg.inv(x.T @ x)
+    result = x @ XtX_inv @ x.T @ y
+    # Return as 1D if input was 1D
+    return result.flatten()
+
+def orth(y, x):
+    # Handle 1D arrays by converting to column vectors
+    if len(x.shape) == 1:
+        x = x.reshape(-1, 1)
+    if len(y.shape) == 1:
+        y = y.reshape(-1, 1)
+    # Now compute: y - x @ inv(x.T @ x) @ x.T @ y
+    XtX_inv = np.linalg.inv(x.T @ x)
+    result = y - x @ XtX_inv @ x.T @ y
+    # Return as 1D if input was 1D
+    return result.flatten()
+
+def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orthProj=False, chained=False, EVs=False):
+    N = 10
+    xa, xb, xc, e = generate_data(N, theta_a, theta_b, gamma)
+    
+    xa_orth_xb = orth(xa, xb) * theta_a
+    xa_proj_xb = proj(xa, xb) * theta_a
+    xb_orth_xa = orth(xb, xa) * theta_b
+    xb_proj_xa = proj(xb, xa) * theta_b
+    xc_hat = xa * theta_a + xb * theta_b
+    
+    C_EV = np.sum(xc**2)
+    U_EV = np.sum(xa_orth_xb**2) / C_EV
+    V_EV = np.sum(xa_proj_xb**2) / C_EV
+    D_EV = np.sum((xa_orth_xb + xa_proj_xb)**2) / C_EV
+    T_EV = np.sum((xa_orth_xb + xa_proj_xb + xb_proj_xa)**2) / C_EV
+    A_EV = np.sum(xb_orth_xa**2) / C_EV
+    C_hat_EV = np.sum(xc_hat**2) / C_EV
+    
+    angle = np.arccos(np.dot(xa, xb) / (np.linalg.norm(xa) * np.linalg.norm(xb)))
+    anglec = np.arccos(np.dot(xa, xc_hat) / (np.linalg.norm(xa) * np.linalg.norm(xc_hat)))
+    angle_aorthb = np.arccos(np.dot(xa, xa_orth_xb) / (np.linalg.norm(xa) * np.linalg.norm(xa_orth_xb)))
+    angle_aprojb = np.arccos(np.dot(xa, xa_proj_xb) / (np.linalg.norm(xa) * np.linalg.norm(xa_proj_xb)))
+    angle_bortha = np.arccos(np.dot(xa, xb_orth_xa) / (np.linalg.norm(xa) * np.linalg.norm(xb_orth_xa)))
+    angle_bproja = 0
+    
+    sig1 = 1 if theta_b > 0 else -1
+    sig2 = -1 if gamma > 0 else 1
+    sig3 = 1 if theta_a > 0 else -1
+    
+    # Cap the xc_hat length to max 2.0 to keep it visible on the plot
+    xc_hat_length = np.sqrt(C_hat_EV)
+    xc_hat_length = min(xc_hat_length, 2.0)
+    
+    arrows = []
+    arrows.append({'x': [0.0, 1.0], 'y': [0.0, 0.0], 'color': 'blue', 'name': 'x<sub>a</sub>', 'width': 3})
+    arrows.append({'x': [0.0, float(np.cos(angle))], 'y': [0.0, float(np.sin(angle))], 'color': 'purple', 'name': 'x<sub>b</sub>', 'width': 3})
+    arrows.append({'x': [0.0, float(np.cos(sig1 * anglec) * xc_hat_length)], 'y': [0.0, float(np.sin(sig1 * anglec) * xc_hat_length)], 'color': 'green', 'name': 'x&#770;<sub>c</sub>', 'width': 3})
+    
+    if regression:
+        arrows.append({'x': [0.0, float(theta_a)], 'y': [0.0, 0.0], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [0.0, float(np.cos(angle) * theta_b)], 'y': [0.0, float(np.sin(angle) * theta_b)], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [float(np.cos(angle) * theta_b), float(np.cos(angle) * theta_b + theta_a)], 'y': [float(np.sin(angle) * theta_b), float(np.sin(angle) * theta_b)], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [float(theta_a), float(theta_a + np.cos(angle) * theta_b)], 'y': [0.0, float(np.sin(angle) * theta_b)], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+    
+    if orthProj:
+        norm_xa_theta_a = np.sqrt(np.sum((xa * theta_a)**2))
+        norm_xb_theta_b = np.sqrt(np.sum((xb * theta_b)**2))
+        
+        xa_orth_scale = np.sqrt(np.sum(xa_orth_xb**2)) / norm_xa_theta_a
+        xa_proj_scale = np.sqrt(np.sum(xa_proj_xb**2)) / norm_xa_theta_a
+        xb_proj_scale = np.sqrt(np.sum(xb_proj_xa**2)) / norm_xb_theta_b
+        xb_orth_scale = np.sqrt(np.sum(xb_orth_xa**2)) / norm_xb_theta_b
+        
+        arrows.append({'x': [0.0, float(sig3 * np.cos(sig2 * angle_aorthb) * xa_orth_scale * theta_a)], 'y': [0.0, float(np.sin(sig2 * angle_aorthb) * xa_orth_scale * theta_a)], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [0.0, float(sig3 * np.cos(-sig2 * angle_aprojb) * xa_proj_scale * theta_a)], 'y': [0.0, float(np.sin(-sig2 * angle_aprojb) * xa_proj_scale * theta_a)], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [0.0, float(-sig2 * np.cos(angle_bproja) * xb_proj_scale * theta_b)], 'y': [0.0, 0.0], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [0.0, float(sig3 * np.cos(angle_bortha) * xb_orth_scale * theta_b)], 'y': [0.0, float(np.sin(angle_bortha) * xb_orth_scale * theta_b)], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+    
+    if chained:
+        norm_xa_theta_a = np.sqrt(np.sum((xa * theta_a)**2))
+        norm_xb_theta_b = np.sqrt(np.sum((xb * theta_b)**2))
+        
+        xa_orth_scale = np.sqrt(np.sum(xa_orth_xb**2)) / norm_xa_theta_a
+        xa_proj_scale = np.sqrt(np.sum(xa_proj_xb**2)) / norm_xa_theta_a
+        xb_proj_scale = np.sqrt(np.sum(xb_proj_xa**2)) / norm_xb_theta_b
+        xb_orth_scale = np.sqrt(np.sum(xb_orth_xa**2)) / norm_xb_theta_b
+        
+        x1 = sig3 * np.cos(sig2 * angle_aorthb) * xa_orth_scale * theta_a
+        y1 = np.sin(sig2 * angle_aorthb) * xa_orth_scale * theta_a
+        x2 = sig3 * np.cos(-sig2 * angle_aprojb) * xa_proj_scale * theta_a
+        y2 = np.sin(-sig2 * angle_aprojb) * xa_proj_scale * theta_a
+        x3 = -sig2 * np.cos(angle_bproja) * xb_proj_scale * theta_b
+        y3 = 0.0
+        x4 = sig3 * np.cos(angle_bortha) * xb_orth_scale * theta_b
+        y4 = np.sin(angle_bortha) * xb_orth_scale * theta_b
+        
+        arrows.append({'x': [0.0, float(x1)], 'y': [0.0, float(y1)], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [float(x1), float(x1 + x2)], 'y': [float(y1), float(y1 + y2)], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [float(x1 + x2), float(x1 + x2 + x3)], 'y': [float(y1 + y2), float(y1 + y2 + y3)], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+        arrows.append({'x': [float(x1 + x2 + x3), float(x1 + x2 + x3 + x4)], 'y': [float(y1 + y2 + y3), float(y1 + y2 + y3 + y4)], 'color': 'purple', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
+    
+    if EVs:
+        x1 = sig3 * np.cos(sig2 * angle_aorthb) * np.sqrt(np.sum(xa_orth_xb**2) / np.sum((xa * theta_a)**2)) * theta_a
+        y1 = np.sin(sig2 * angle_aorthb) * np.sqrt(np.sum(xa_orth_xb**2) / np.sum((xa * theta_a)**2)) * theta_a
+        x_chain = sig3 * np.cos(sig2 * angle_aorthb) * np.sqrt(np.sum(xa_orth_xb**2) / np.sum((xa * theta_a)**2)) * theta_a + sig3 * np.cos(-sig2 * angle_aprojb) * np.sqrt(np.sum(xa_proj_xb**2) / np.sum((xa * theta_a)**2)) * theta_a - sig2 * np.cos(angle_bproja) * np.sqrt(np.sum(xb_proj_xa**2) / np.sum((xb * theta_b)**2)) * theta_b
+        y_chain = np.sin(sig2 * angle_aorthb) * np.sqrt(np.sum(xa_orth_xb**2) / np.sum((xa * theta_a)**2)) * theta_a + np.sin(-sig2 * angle_aprojb) * np.sqrt(np.sum(xa_proj_xb**2) / np.sum((xa * theta_a)**2)) * theta_a
+    
+    contributions = {'circles': [], 'dots': []}
+    if EVs:
+        # Circle for U_EV
+        contributions['circles'].append({'center': [0.0, 0.0], 'radius': float(np.sqrt(U_EV)), 'color': 'green', 'label': 'U'})
+        contributions['dots'].append({'x': float(x1), 'y': float(y1), 'color': 'green', 'label': 'U'})
+        
+        # Circle for T_EV
+        contributions['circles'].append({'center': [0.0, 0.0], 'radius': float(np.sqrt(T_EV)), 'color': 'black', 'label': 'T'})
+        x_t = sig3 * np.cos(sig2 * angle_aorthb) * np.sqrt(np.sum(xa_orth_xb**2) / np.sum((xa * theta_a)**2)) * theta_a + sig3 * np.cos(-sig2 * angle_aprojb) * np.sqrt(np.sum(xa_proj_xb**2) / np.sum((xa * theta_a)**2)) * theta_a - sig2 * np.cos(angle_bproja) * np.sqrt(np.sum(xb_proj_xa**2) / np.sum((xb * theta_b)**2)) * theta_b
+        y_t = np.sin(sig2 * angle_aorthb) * np.sqrt(np.sum(xa_orth_xb**2) / np.sum((xa * theta_a)**2)) * theta_a + np.sin(-sig2 * angle_aprojb) * np.sqrt(np.sum(xa_proj_xb**2) / np.sum((xa * theta_a)**2)) * theta_a
+        contributions['dots'].append({'x': float(x_t), 'y': float(y_t), 'color': 'black', 'label': 'T'})
+    
+    return {'arrows': arrows, 'contributions': contributions, 'T': float(T_EV), 'U': float(U_EV), 'INT': float(T_EV - U_EV), 'Ad': float(A_EV), 'angle_ab': float(angle / np.pi), 'angle_ac': float(np.arccos(np.clip(np.dot(xa, xc) / (np.linalg.norm(xa) * np.linalg.norm(xc)), -1, 1)) / np.pi)}
+`;
+
+                await pyodide.runPythonAsync(pythonCode);
+                console.log("Python code executed successfully");
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main').style.display = 'block';
+
+                document.getElementById("theta_a").addEventListener("input", updatePlot);
+                document.getElementById("theta_b").addEventListener("input", updatePlot);
+                document.getElementById("gamma").addEventListener("input", updatePlot);
+                document.getElementById("regression").addEventListener("change", updatePlot);
+                document.getElementById("orthProj").addEventListener("change", updatePlot);
+                document.getElementById("chained").addEventListener("change", updatePlot);
+                document.getElementById("EVs").addEventListener("change", updatePlot);
+
+                console.log("Event listeners attached, calling updatePlot...");
+                updatePlot();
+            } catch (error) {
+                console.error("Error during initialization:", error);
+                document.getElementById('loading').innerHTML = '<div style="color: red; padding: 20px;"><strong>Error:</strong> ' + error.message + '<br><br><pre style="text-align: left; background: #f0f0f0; padding: 10px;">' + error.stack + '</pre></div>';
+            }
+        }
+
+        function updatePlot() {
+            try {
+                const theta_a = parseFloat(document.getElementById("theta_a").value);
+                const theta_b = parseFloat(document.getElementById("theta_b").value);
+                const gamma = parseFloat(document.getElementById("gamma").value);
+                const regression = document.getElementById("regression").checked;
+                const orthProj = document.getElementById("orthProj").checked;
+                const chained = document.getElementById("chained").checked;
+                const EVs = document.getElementById("EVs").checked;
+
+                document.getElementById("val_theta_a").textContent = theta_a.toFixed(2);
+                document.getElementById("val_theta_b").textContent = theta_b.toFixed(2);
+                document.getElementById("val_gamma").textContent = gamma.toFixed(2);
+
+                const result = pyodide.globals.get("plot_arrows_data")(theta_a, theta_b, gamma, regression, orthProj, chained, EVs);
+                
+                // Convert PyDict to JavaScript object
+                const resultObj = {};
+                for (const key of result.keys()) {
+                    const val = result.get(key);
+                    if (key === 'arrows') {
+                        // Convert arrows list
+                        resultObj[key] = [];
+                        for (let i = 0; i < val.length; i++) {
+                            const arrowPy = val.get(i);
+                            resultObj[key].push({
+                                x: arrowPy.get('x').toJs(),
+                                y: arrowPy.get('y').toJs(),
+                                color: arrowPy.get('color'),
+                                name: arrowPy.get('name'),
+                                width: arrowPy.get('width') || 3,
+                                dash: arrowPy.get('dash') || 'solid',
+                                opacity: arrowPy.get('opacity') || 1.0
+                            });
+                        }
+                    } else if (key === 'contributions') {
+                        // Convert contributions dict - it comes as a PyDict with 'circles' and 'dots' keys
+                        const circles = [];
+                        const dots = [];
+                        
+                        // Access PyDict via .get()
+                        const circlesPy = val.get('circles');
+                        const dotsPy = val.get('dots');
+                        
+                        if (circlesPy && circlesPy.length > 0) {
+                            for (let i = 0; i < circlesPy.length; i++) {
+                                const c = circlesPy.get(i);
+                                const center = c.get('center');
+                                const radius = c.get('radius');
+                                const color = c.get('color');
+                                const label = c.get('label');
+                                
+                                let centerArray = center;
+                                if (center && typeof center.toJs === 'function') {
+                                    centerArray = Array.from(center.toJs());
+                                } else if (center && typeof center === 'object' && center.length !== undefined) {
+                                    centerArray = Array.from(center);
+                                }
+                                
+                                circles.push({
+                                    center: centerArray,
+                                    radius: typeof radius === 'number' ? radius : parseFloat(radius),
+                                    color: color,
+                                    label: label
+                                });
+                            }
+                        }
+                        if (dotsPy && dotsPy.length > 0) {
+                            for (let i = 0; i < dotsPy.length; i++) {
+                                const d = dotsPy.get(i);
+                                const x = d.get('x');
+                                const y = d.get('y');
+                                const color = d.get('color');
+                                const label = d.get('label');
+                                
+                                dots.push({
+                                    x: typeof x === 'number' ? x : parseFloat(x),
+                                    y: typeof y === 'number' ? y : parseFloat(y),
+                                    color: color,
+                                    label: label
+                                });
+                            }
+                        }
+                        resultObj[key] = { circles, dots };
+                    } else {
+                        resultObj[key] = val;
+                    }
+                }
+
+                const traces = [];
+                
+                // Add arrow traces
+                for (let i = 0; i < resultObj.arrows.length; i++) {
+                    const arrow = resultObj.arrows[i];
+                    const isDashed = arrow.dash === 'dash';
+                    traces.push({
+                        x: arrow.x,
+                        y: arrow.y,
+                        mode: 'lines+markers',
+                        type: 'scatter',
+                        name: isDashed || arrow.name === '' ? '' : arrow.name,
+                        line: { color: arrow.color, width: arrow.width || 3, dash: arrow.dash || 'solid' },
+                        marker: { size: 8 },
+                        opacity: arrow.opacity,
+                        showlegend: !isDashed && arrow.name !== ''
+                    });
+                }
+                
+                // Add circles as scatter plots (circle outlines)
+                if (EVs && resultObj.contributions && resultObj.contributions.circles) {
+                    for (const circle of resultObj.contributions.circles) {
+                        const theta = [];
+                        const circleX = [];
+                        const circleY = [];
+                        for (let i = 0; i <= 100; i++) {
+                            theta.push(2 * Math.PI * i / 100);
+                            circleX.push(circle.center[0] + circle.radius * Math.cos(theta[i]));
+                            circleY.push(circle.center[1] + circle.radius * Math.sin(theta[i]));
+                        }
+                        traces.push({
+                            x: circleX,
+                            y: circleY,
+                            mode: 'lines',
+                            type: 'scatter',
+                            name: 'circle',
+                            line: { color: circle.color, width: 1 },
+                            opacity: 0.2,
+                            showlegend: false,
+                            hoverinfo: 'skip'
+                        });
+                    }
+                }
+                
+                // Add dots
+                if (EVs && resultObj.contributions && resultObj.contributions.dots) {
+                    for (const dot of resultObj.contributions.dots) {
+                        traces.push({
+                            x: [dot.x],
+                            y: [dot.y],
+                            mode: 'markers',
+                            type: 'scatter',
+                            name: '',
+                            marker: { color: dot.color, size: 6 },
+                            showlegend: false,
+                            hoverinfo: 'skip'
+                        });
+                    }
+                }
+
+                const layout = { 
+                    title: '', 
+                    xaxis: { range: [-1.5, 1.5], scaleanchor: 'y', scaleratio: 1 }, 
+                    yaxis: { range: [-1.2, 1.2], scaleanchor: 'x', scaleratio: 1 }, 
+                    height: 500,
+                    legend: { x: 0.02, y: 0.98 }
+                };
+                Plotly.newPlot('plot', traces, layout, { responsive: true });
+
+                document.getElementById('stat_T').textContent = (resultObj.T * 100).toFixed(1);
+                document.getElementById('stat_U').textContent = (resultObj.U * 100).toFixed(1);
+                document.getElementById('stat_INT').textContent = (resultObj.INT * 100).toFixed(1);
+                document.getElementById('stat_Ad').textContent = (resultObj.Ad * 100).toFixed(1);
+            } catch (error) {
+                console.error("Error in updatePlot:", error);
+                console.error("Stack:", error.stack);
+            }
+        }
+
+        window.addEventListener('load', initPython);
+    </script>
+</body>
+</html>
