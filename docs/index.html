@@ -50,19 +50,37 @@
         input[type="checkbox"] { margin-right: 8px; }
         .slider-value { font-size: 12px; color: #666; margin-left: 10px; }
         .checkbox-label { display: flex; align-items: center; margin-bottom: 8px; font-weight: normal; }
+        .expander { margin-top: 10px; margin-bottom: 15px; border-left: 3px solid #00897b; }
+        .expander-header { background: #f9f9f9; padding: 10px; cursor: pointer; user-select: none; display: flex; align-items: center; font-size: 13px; font-weight: 500; }
+        .expander-header:hover { background: #f0f0f0; }
+        .expander-toggle { display: inline-block; margin-right: 8px; width: 16px; text-align: center; }
+        .expander-content { display: none; padding: 10px; background: #fafafa; font-size: 12px; line-height: 1.5; color: #555; }
+        .expander-content.open { display: block; }
         .plot-container { background: white; padding: 15px; border-radius: 8px; width: 545px; height: 545px; }
         #plot { width: 100%; height: 100%; }
         .stats { background: white; padding: 12px; border-radius: 8px; font-size: 12px; }
         .stats h3 { margin: 0 0 10px 0; font-size: 14px; }
         .stat-item { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
         .stat-item:last-child { border-bottom: none; }
-        .stat-label { font-size: 14px; color: #666; }
+        .stat-label { font-size: 14px; color: #666; cursor: help; position: relative; }
+        .stat-value { font-size: 14px; font-weight: bold; color: #333; text-align: right; cursor: help; position: relative; }
+        .stat-item:hover .stat-label::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 6px 10px; border-radius: 4px; white-space: nowrap; font-size: 12px; z-index: 1000; pointer-events: none; }
+        .stat-item:hover .stat-label::before { content: ''; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #333; z-index: 1000; pointer-events: none; }
+        .stat-label.touch-active::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 6px 10px; border-radius: 4px; white-space: nowrap; font-size: 12px; z-index: 1000; pointer-events: none; }
+        .stat-label.touch-active::before { content: ''; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #333; z-index: 1000; pointer-events: none; }
         .stat-value { font-size: 14px; font-weight: bold; color: #333; text-align: right; }
         .stat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; visibility: hidden; flex-shrink: 0; }
+        .checkbox-label { cursor: help; position: relative; }
+        .checkbox-label:hover::after { content: attr(title); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 1000; pointer-events: none; white-space: normal; width: 180px; text-align: center; }
+        .checkbox-label:hover::before { content: ''; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #333; z-index: 1000; pointer-events: none; }
         .right-pane { display: flex; flex-direction: column; gap: 15px; }
-        .diagram { background: white; padding: 12px; border-radius: 8px; text-align: center; }
+        .diagram { background: white; padding: 12px; border-radius: 8px; text-align: center; cursor: help; position: relative; }
+        .diagram:hover::after { content: attr(title); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 1000; pointer-events: none; white-space: normal; width: 200px; text-align: center; }
+        .diagram:hover::before { content: ''; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #333; z-index: 1000; pointer-events: none; }
         .diagram img { width: 100%; max-width: 200px; height: auto; }
-        .equations { background: white; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 1.8; }
+        .equations { background: white; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 1.8; cursor: help; position: relative; }
+        .equations:hover::after { content: attr(title); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 1000; pointer-events: none; white-space: normal; width: 200px; text-align: center; }
+        .equations:hover::before { content: ''; position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #333; z-index: 1000; pointer-events: none; }
         .equations div { margin-bottom: 8px; }
         .loading { text-align: center; padding: 40px; font-size: 18px; }
     </style>
@@ -89,28 +107,39 @@
                 </div>
                 <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
                 <div class="control-group">
-                    <label class="checkbox-label">
+                    <label class="checkbox-label" title="See Explanation below when activated">
                         <input type="checkbox" id="regression">
                         Regression
                     </label>
                 </div>
                 <div class="control-group">
-                    <label class="checkbox-label">
+                    <label class="checkbox-label" title="See Explanation below when activated">
                         <input type="checkbox" id="orthProj">
-                        Centered Orthogonal Projections
+                        Centred Orthogonal Projections
                     </label>
                 </div>
                 <div class="control-group">
-                    <label class="checkbox-label">
+                    <label class="checkbox-label" title="See Explanation below when activated">
                         <input type="checkbox" id="chained">
                         Chained Orthogonal Projections
                     </label>
                 </div>
                 <div class="control-group">
-                    <label class="checkbox-label">
+                    <label class="checkbox-label" title="See Explanation below when activated">
                         <input type="checkbox" id="EVs">
                         Contribution circles
                     </label>
+                </div>
+                
+                <!-- Single Explanation Expander -->
+                <div class="expander" id="expander-explanation">
+                    <div class="expander-header">
+                        <span class="expander-toggle">▶</span>
+                        <span>Explanation</span>
+                    </div>
+                    <div class="expander-content" id="explanation-content">
+                        Select a visualization option to see its explanation.
+                    </div>
                 </div>
             </div>
             
@@ -121,17 +150,17 @@
             <div class="right-pane">
                 <div class="stats">
                     <h3>Contributions</h3>
-                    <div class="stat-item"><div class="stat-label">T<sub>A→C</sub></div><div class="stat-value" id="stat_T">-</div><span class="stat-dot" id="dot_T" style="background-color: black;"></span></div>
-                    <div class="stat-item"><div class="stat-label">U<sub>A→C</sub></div><div class="stat-value" id="stat_U">-</div><span class="stat-dot" id="dot_U" style="background-color: green;"></span></div>
-                    <div class="stat-item"><div class="stat-label">Ind<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT">-</div><span class="stat-dot" id="dot_INT" style="background-color: transparent;"></span></div>
-                    <div class="stat-item"><div class="stat-label">Ad<sub>A(B)→C</sub></div><div class="stat-value" id="stat_Ad">-</div><span class="stat-dot" id="dot_Ad" style="background-color: transparent;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Total">T<sub>A→C</sub></div><div class="stat-value" id="stat_T">-</div><span class="stat-dot" id="dot_T" style="background-color: black;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Unique">U<sub>A→C</sub></div><div class="stat-value" id="stat_U">-</div><span class="stat-dot" id="dot_U" style="background-color: green;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Indirect">Ind<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT">-</div><span class="stat-dot" id="dot_INT" style="background-color: transparent;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Additional">Ad<sub>A(B)→C</sub></div><div class="stat-value" id="stat_Ad">-</div><span class="stat-dot" id="dot_Ad" style="background-color: transparent;"></span></div>
                 </div>
-                <div class="diagram">
+                <div class="diagram" title="Directed Acyclic Graph relating the three blocks/variables.">
                     <img src="img/DAG.png" alt="Directed Acyclic Graph">
                 </div>
-                <div class="equations">
-                    <div><b>x</b><sub>C</sub> = <b>x</b><sub>A</sub> θ<sub>A</sub> + <b>x</b><sub>B</sub> θ<sub>B</sub> + <b>e</b></div>
-                    <div><b>x</b><sub>B</sub> = <b>x</b><sub>A</sub> γ + <b>f</b></div>
+                <div class="equations" title="Equations linking the vectors together through coefficients chosen using the sliders.">
+                    <div><b style="color: #2ca02c;">x</b><sub style="color: #2ca02c;">C</sub> = <b style="color: #1f77b4;">x</b><sub style="color: #1f77b4;">A</sub> θ<sub>A</sub> + <b style="color: #9467bd;">x</b><sub style="color: #9467bd;">B</sub> θ<sub>B</sub> + <b>e</b></div>
+                    <div><b style="color: #9467bd;">x</b><sub style="color: #9467bd;">B</sub> = <b style="color: #1f77b4;">x</b><sub style="color: #1f77b4;">A</sub> γ + <b>f</b></div>
                 </div>
             </div>
         </div>
@@ -157,45 +186,56 @@
                 </div>
                 <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
                 <div class="control-group">
-                    <label class="checkbox-label">
+                    <label class="checkbox-label" title="See Explanation below when activated">
                         <input type="checkbox" id="regression_p">
                         Regression
                     </label>
                 </div>
                 <div class="control-group">
-                    <label class="checkbox-label">
+                    <label class="checkbox-label" title="See Explanation below when activated">
                         <input type="checkbox" id="orthProj_p">
-                        Centered Orthogonal Projections
+                        Centred Orthogonal Projections
                     </label>
                 </div>
                 <div class="control-group">
-                    <label class="checkbox-label">
+                    <label class="checkbox-label" title="See Explanation below when activated">
                         <input type="checkbox" id="chained_p">
                         Chained Orthogonal Projections
                     </label>
                 </div>
                 <div class="control-group">
-                    <label class="checkbox-label">
+                    <label class="checkbox-label" title="See Explanation below when activated">
                         <input type="checkbox" id="EVs_p">
                         Contribution circles
                     </label>
+                </div>
+                
+                <!-- Single Explanation Expander (portrait) -->
+                <div class="expander" id="expander-explanation_p">
+                    <div class="expander-header">
+                        <span class="expander-toggle">▶</span>
+                        <span>Explanation</span>
+                    </div>
+                    <div class="expander-content" id="explanation-content_p">
+                        Select a visualization option to see its explanation.
+                    </div>
                 </div>
             </div>
             
             <div class="right-pane">
                 <div class="stats">
                     <h3>Contributions</h3>
-                    <div class="stat-item"><div class="stat-label">T<sub>A→C</sub></div><div class="stat-value" id="stat_T_p">-</div><span class="stat-dot" id="dot_T_p" style="background-color: black;"></span></div>
-                    <div class="stat-item"><div class="stat-label">U<sub>A→C</sub></div><div class="stat-value" id="stat_U_p">-</div><span class="stat-dot" id="dot_U_p" style="background-color: green;"></span></div>
-                    <div class="stat-item"><div class="stat-label">Ind<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT_p">-</div><span class="stat-dot" id="dot_INT_p" style="background-color: transparent;"></span></div>
-                    <div class="stat-item"><div class="stat-label">Ad<sub>A(B)→C</sub></div><div class="stat-value" id="stat_Ad_p">-</div><span class="stat-dot" id="dot_Ad_p" style="background-color: transparent;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Total">T<sub>A→C</sub></div><div class="stat-value" id="stat_T_p">-</div><span class="stat-dot" id="dot_T_p" style="background-color: black;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Unique">U<sub>A→C</sub></div><div class="stat-value" id="stat_U_p">-</div><span class="stat-dot" id="dot_U_p" style="background-color: green;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Indirect">Ind<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT_p">-</div><span class="stat-dot" id="dot_INT_p" style="background-color: transparent;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Additional">Ad<sub>A(B)→C</sub></div><div class="stat-value" id="stat_Ad_p">-</div><span class="stat-dot" id="dot_Ad_p" style="background-color: transparent;"></span></div>
                 </div>
-                <div class="diagram">
+                <div class="diagram" title="Directed Acyclic Graph relating the three blocks/variables.">
                     <img src="img/DAG.png" alt="Directed Acyclic Graph">
                 </div>
-                <div class="equations">
-                    <div><b>x</b><sub>C</sub> = <b>x</b><sub>A</sub>θ<sub>A</sub> + <b>x</b><sub>B</sub>θ<sub>B</sub> + <b>e</b></div>
-                    <div><b>x</b><sub>B</sub> = <b>x</b><sub>A</sub>γ + <b>f</b></div>
+                <div class="equations" title="Equations linking the vectors together through coefficients chosen using the sliders.">
+                    <div><b style="color: #2ca02c;">x</b><sub style="color: #2ca02c;">C</sub> = <b style="color: #1f77b4;">x</b><sub style="color: #1f77b4;">A</sub>θ<sub>A</sub> + <b style="color: #9467bd;">x</b><sub style="color: #9467bd;">B</sub>θ<sub>B</sub> + <b>e</b></div>
+                    <div><b style="color: #9467bd;">x</b><sub style="color: #9467bd;">B</sub> = <b style="color: #1f77b4;">x</b><sub style="color: #1f77b4;">A</sub>γ + <b>f</b></div>
                 </div>
             </div>
         </div>
@@ -221,6 +261,172 @@
             document.getElementById("val_theta_a_p").textContent = document.getElementById("val_theta_a").textContent;
             document.getElementById("val_theta_b_p").textContent = document.getElementById("val_theta_b").textContent;
             document.getElementById("val_gamma_p").textContent = document.getElementById("val_gamma").textContent;
+            
+            // Also sync expander states
+            syncExpanderStates();
+        }
+
+        function syncExpanderStates() {
+            const landscapeExpander = document.getElementById('expander-explanation');
+            const portraitExpander = document.getElementById('expander-explanation_p');
+            
+            if (landscapeExpander && portraitExpander) {
+                const landscapeContent = landscapeExpander.querySelector('.expander-content');
+                const portraitContent = portraitExpander.querySelector('.expander-content');
+                
+                if (landscapeContent && landscapeContent.classList.contains('open')) {
+                    portraitContent.classList.add('open');
+                    portraitExpander.querySelector('.expander-toggle').textContent = '▼';
+                } else if (portraitContent) {
+                    portraitContent.classList.remove('open');
+                    portraitExpander.querySelector('.expander-toggle').textContent = '▶';
+                }
+            }
+        }
+
+        function updateExplanation() {
+            const regression = document.getElementById("regression").checked;
+            const orthProj = document.getElementById("orthProj").checked;
+            const chained = document.getElementById("chained").checked;
+            const EVs = document.getElementById("EVs").checked;
+            
+            let explanation = "";
+            
+            if (!regression && !orthProj && !chained && !EVs) {
+                explanation = "Select a visualization option to see its explanation.";
+            } else {
+                const parts = [];
+                
+                if (regression) {
+                    parts.push("🔵 <b>Regression</b>: Shows how X<sub>C</sub> is explained by X<sub>A</sub> (blue) and X<sub>B</sub> (purple).");
+                }
+                
+                if (orthProj) {
+                    parts.push("📐 <b>Centred Orthogonal Projections</b>: Decomposes regression vectors into orthogonal and projected components, showing independent and correlated contributions.");
+                    if (regression) {
+                        parts.push("🔗 <i>Combined with Regression</i>: Gray dotted connector lines link each decomposition to its regression endpoint, revealing the relationships between the two methods.");
+                    }
+                }
+                
+                if (chained) {
+                    parts.push("⛓️ <b>Chained Orthogonal Projections</b>: Like the centred version, but shows cumulative effect path starting with X<sub>A</sub> orthogonal to X<sub>B</sub>, then X<sub>A</sub> projected on X<sub>B</sub>, then the X<sub>B</sub> effects in sequence.");
+                }
+                
+                if (EVs) {
+                    parts.push("⭕ <b>Contribution circles</b>: Displays circles for variance explained (T and U contributions) with contribution dots on respective vectors.");
+                }
+                
+                explanation = parts.join("<br><br>");
+            }
+            
+            // Update both landscape and portrait
+            const contentElement = document.getElementById("explanation-content");
+            const contentElement_p = document.getElementById("explanation-content_p");
+            
+            if (contentElement) contentElement.innerHTML = explanation;
+            if (contentElement_p) contentElement_p.innerHTML = explanation;
+        }
+
+        function setupExpanderListeners() {
+            const expanderIds = ['explanation'];
+            
+            for (const id of expanderIds) {
+                for (const suffix of ['', '_p']) {
+                    const expanderId = 'expander-' + id + suffix;
+                    const expander = document.getElementById(expanderId);
+                    if (expander) {
+                        const header = expander.querySelector('.expander-header');
+                        header.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const content = expander.querySelector('.expander-content');
+                            const toggle = expander.querySelector('.expander-toggle');
+                            
+                            content.classList.toggle('open');
+                            toggle.textContent = content.classList.contains('open') ? '▼' : '▶';
+                            
+                            // Sync to the other orientation
+                            const otherSuffix = suffix === '' ? '_p' : '';
+                            const otherExpanderId = 'expander-' + id + otherSuffix;
+                            const otherExpander = document.getElementById(otherExpanderId);
+                            if (otherExpander) {
+                                const otherContent = otherExpander.querySelector('.expander-content');
+                                const otherToggle = otherExpander.querySelector('.expander-toggle');
+                                if (content.classList.contains('open')) {
+                                    otherContent.classList.add('open');
+                                    otherToggle.textContent = '▼';
+                                } else {
+                                    otherContent.classList.remove('open');
+                                    otherToggle.textContent = '▶';
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        function setupTouchTooltips() {
+            const labels = document.querySelectorAll('.stat-label');
+            const values = document.querySelectorAll('.stat-value');
+            
+            const toggleTooltip = (label) => {
+                e.preventDefault();
+                
+                // Remove active class from all labels
+                document.querySelectorAll('.stat-label').forEach(l => {
+                    l.classList.remove('touch-active');
+                });
+                
+                // Add active class to clicked label
+                label.classList.add('touch-active');
+            };
+            
+            // Handle label touches
+            labels.forEach(label => {
+                label.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    
+                    // Remove active class from all labels
+                    document.querySelectorAll('.stat-label').forEach(l => {
+                        l.classList.remove('touch-active');
+                    });
+                    
+                    // Add active class to clicked label
+                    label.classList.add('touch-active');
+                });
+            });
+            
+            // Handle value touches - find and activate the corresponding label
+            values.forEach(value => {
+                value.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    
+                    // Find the sibling label and activate its tooltip
+                    const statItem = value.closest('.stat-item');
+                    if (statItem) {
+                        const label = statItem.querySelector('.stat-label');
+                        
+                        // Remove active class from all labels
+                        document.querySelectorAll('.stat-label').forEach(l => {
+                            l.classList.remove('touch-active');
+                        });
+                        
+                        // Add active class to the corresponding label
+                        if (label) {
+                            label.classList.add('touch-active');
+                        }
+                    }
+                });
+            });
+            
+            // Remove tooltip when clicking elsewhere
+            document.addEventListener('touchstart', (e) => {
+                if (!e.target.classList.contains('stat-label')) {
+                    document.querySelectorAll('.stat-label').forEach(l => {
+                        l.classList.remove('touch-active');
+                    });
+                }
+            });
         }
 
         function isValidPlot() {
@@ -413,9 +619,9 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
     xc_hat_length = min(xc_hat_length, 2.0)
     
     arrows = []
-    arrows.append({'x': [0.0, 1.0], 'y': [0.0, 0.0], 'color': 'blue', 'name': '<b>x</b><sub>A</sub>', 'width': 3})
-    arrows.append({'x': [0.0, float(np.cos(angle))], 'y': [0.0, float(np.sin(angle))], 'color': 'purple', 'name': '<b>x</b><sub>B</sub>', 'width': 3})
-    arrows.append({'x': [0.0, float(np.cos(sig1 * anglec) * xc_hat_length)], 'y': [0.0, float(np.sin(sig1 * anglec) * xc_hat_length)], 'color': 'green', 'name': '<b>x&#770;</b><sub>C</sub>', 'width': 3})
+    arrows.append({'x': [0.0, 1.0], 'y': [0.0, 0.0], 'color': 'blue', 'name': '<b>x</b><sub>A</sub>', 'width': 3, 'hovertemplate': '<b>x</b><sub>A</sub><br>x: %{x:.2f}<br>y: %{y:.2f}<extra></extra>'})
+    arrows.append({'x': [0.0, float(np.cos(angle))], 'y': [0.0, float(np.sin(angle))], 'color': 'purple', 'name': '<b>x</b><sub>B</sub>', 'width': 3, 'hovertemplate': '<b>x</b><sub>B</sub><br>x: %{x:.2f}<br>y: %{y:.2f}<extra></extra>'})
+    arrows.append({'x': [0.0, float(np.cos(sig1 * anglec) * xc_hat_length)], 'y': [0.0, float(np.sin(sig1 * anglec) * xc_hat_length)], 'color': 'green', 'name': '<b>x&#770;</b><sub>C</sub>', 'width': 3, 'hovertemplate': '<b>x̂</b><sub>C</sub><br>x: %{x:.2f}<br>y: %{y:.2f}<extra></extra>'})
     
     if regression:
         arrows.append({'x': [0.0, float(theta_a)], 'y': [0.0, 0.0], 'color': 'blue', 'name': '', 'width': 1.5, 'dash': 'dash', 'opacity': 0.3})
@@ -531,10 +737,22 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                 attachValidationListeners("theta_b_p");
                 attachValidationListeners("gamma_p");
                 
-                document.getElementById("regression").addEventListener("change", updatePlot);
-                document.getElementById("orthProj").addEventListener("change", updatePlot);
-                document.getElementById("chained").addEventListener("change", updatePlot);
-                document.getElementById("EVs").addEventListener("change", updatePlot);
+                document.getElementById("regression").addEventListener("change", () => {
+                    updatePlot();
+                    updateExplanation();
+                });
+                document.getElementById("orthProj").addEventListener("change", () => {
+                    updatePlot();
+                    updateExplanation();
+                });
+                document.getElementById("chained").addEventListener("change", () => {
+                    updatePlot();
+                    updateExplanation();
+                });
+                document.getElementById("EVs").addEventListener("change", () => {
+                    updatePlot();
+                    updateExplanation();
+                });
                 
                 // Add portrait container listeners (portrait sliders sync to landscape)
                 document.getElementById("theta_a_p").addEventListener("input", () => {
@@ -553,22 +771,29 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                 document.getElementById("regression_p").addEventListener("change", () => {
                     document.getElementById("regression").checked = document.getElementById("regression_p").checked;
                     updatePlot();
+                    updateExplanation();
                 });
                 document.getElementById("orthProj_p").addEventListener("change", () => {
                     document.getElementById("orthProj").checked = document.getElementById("orthProj_p").checked;
                     updatePlot();
+                    updateExplanation();
                 });
                 document.getElementById("chained_p").addEventListener("change", () => {
                     document.getElementById("chained").checked = document.getElementById("chained_p").checked;
                     updatePlot();
+                    updateExplanation();
                 });
                 document.getElementById("EVs_p").addEventListener("change", () => {
                     document.getElementById("EVs").checked = document.getElementById("EVs_p").checked;
                     updatePlot();
+                    updateExplanation();
                 });
 
                 console.log("Event listeners attached, calling updatePlot...");
+                setupExpanderListeners();
+                setupTouchTooltips();
                 updatePlot();
+                updateExplanation();
                 saveValidState();
             } catch (error) {
                 console.error("Error during initialization:", error);
@@ -610,7 +835,8 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                                 name: arrowPy.get('name'),
                                 width: arrowPy.get('width') || 3,
                                 dash: arrowPy.get('dash') || 'solid',
-                                opacity: arrowPy.get('opacity') || 1.0
+                                opacity: arrowPy.get('opacity') || 1.0,
+                                hovertemplate: arrowPy.get('hovertemplate') || null
                             });
                         }
                     } else if (key === 'contributions') {
@@ -673,7 +899,7 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                 for (let i = 0; i < resultObj.arrows.length; i++) {
                     const arrow = resultObj.arrows[i];
                     const isDashed = arrow.dash === 'dash';
-                    traces.push({
+                    const traceObj = {
                         x: arrow.x,
                         y: arrow.y,
                         mode: 'lines+markers',
@@ -683,7 +909,18 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
                         marker: { size: 8 },
                         opacity: arrow.opacity,
                         showlegend: !isDashed && arrow.name !== ''
-                    });
+                    };
+                    
+                    // Add hovertemplate
+                    if (arrow.hovertemplate) {
+                        // Use custom hovertemplate if provided in Python
+                        traceObj.hovertemplate = arrow.hovertemplate;
+                    } else {
+                        // Default: show coordinates with 2 decimal places for other arrows
+                        traceObj.hovertemplate = 'x: %{x:.2f}<br>y: %{y:.2f}<extra></extra>';
+                    }
+                    
+                    traces.push(traceObj);
                 }
                 
                 // Add circles as scatter plots (circle outlines)
