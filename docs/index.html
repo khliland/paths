@@ -654,12 +654,12 @@ def plot_arrows_data(theta_a=0.5, theta_b=0.4, gamma=0.3, regression=False, orth
             reg_purple_endpoint = [float(np.cos(angle) * theta_b), float(np.sin(angle) * theta_b)]
             
             # Connect regression blue to orthogonal blue components
-            arrows.append({'x': [reg_blue_endpoint[0], xa_orth_endpoint[0]], 'y': [reg_blue_endpoint[1], xa_orth_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5, 'marker': 1})
-            arrows.append({'x': [reg_blue_endpoint[0], xa_proj_endpoint[0]], 'y': [reg_blue_endpoint[1], xa_proj_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5, 'marker': 1})
+            arrows.append({'x': [reg_blue_endpoint[0], xa_orth_endpoint[0]], 'y': [reg_blue_endpoint[1], xa_orth_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5})
+            arrows.append({'x': [reg_blue_endpoint[0], xa_proj_endpoint[0]], 'y': [reg_blue_endpoint[1], xa_proj_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5})
             
             # Connect blue regression (at origin) to orthogonal purple components
-            arrows.append({'x': [reg_purple_endpoint[0], xb_proj_endpoint[0]], 'y': [reg_purple_endpoint[1], xb_proj_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5, 'marker': 1})
-            arrows.append({'x': [reg_purple_endpoint[0], xb_orth_endpoint[0]], 'y': [reg_purple_endpoint[1], xb_orth_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5, 'marker': 1})
+            arrows.append({'x': [reg_purple_endpoint[0], xb_proj_endpoint[0]], 'y': [reg_purple_endpoint[1], xb_proj_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5})
+            arrows.append({'x': [reg_purple_endpoint[0], xb_orth_endpoint[0]], 'y': [reg_purple_endpoint[1], xb_orth_endpoint[1]], 'color': 'gray', 'name': '', 'width': 1.0, 'dash': 'dot', 'opacity': 0.5})
     
     if chained:
         norm_xa_theta_a = np.sqrt(np.sum((xa * theta_a)**2))
