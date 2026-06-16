@@ -150,12 +150,12 @@
             <div class="right-pane">
                 <div class="stats">
                     <h3>Contributions</h3>
-                    <div class="stat-item"><div class="stat-label" data-tooltip="Total">T<sub>A→C</sub></div><div class="stat-value" id="stat_T">-</div><span class="stat-dot" id="dot_T" style="background-color: black;"></span></div>
-                    <div class="stat-item"><div class="stat-label" data-tooltip="Unique">U<sub>A→C</sub></div><div class="stat-value" id="stat_U">-</div><span class="stat-dot" id="dot_U" style="background-color: green;"></span></div>
-                    <div class="stat-item"><div class="stat-label" data-tooltip="Indirect">Ind<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT">-</div><span class="stat-dot" id="dot_INT" style="background-color: transparent;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Total">Tot<sub>A→C</sub></div><div class="stat-value" id="stat_T">-</div><span class="stat-dot" id="dot_T" style="background-color: black;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Unique">Un<sub>A→C</sub></div><div class="stat-value" id="stat_U">-</div><span class="stat-dot" id="dot_U" style="background-color: green;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Indirect">Co<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT">-</div><span class="stat-dot" id="dot_INT" style="background-color: transparent;"></span></div>
                     <div class="stat-item"><div class="stat-label" data-tooltip="Additional">Ad<sub>A(B)→C</sub></div><div class="stat-value" id="stat_Ad">-</div><span class="stat-dot" id="dot_Ad" style="background-color: transparent;"></span></div>
                     <div style="margin-top: 12px; padding-top: 10px; font-size: 10px; color: #999; line-height: 1.4;">
-                        Liland, K.H., Romano, R., Tomic, O., and Næs, T.. Alternative definitions of effects in path analysis with multidimensional blocks. In preparation.
+                        Liland, K.H., Romano, R., Tomic, O., and Næs, T.. Alternative ways of splitting sums of squares in multiblock regression with application in path analysis. In preparation.
                     </div>
                 </div>
                 <div class="diagram" title="Directed Acyclic Graph relating the three blocks/variables.">
@@ -228,12 +228,12 @@
             <div class="right-pane">
                 <div class="stats">
                     <h3>Contributions</h3>
-                    <div class="stat-item"><div class="stat-label" data-tooltip="Total">T<sub>A→C</sub></div><div class="stat-value" id="stat_T_p">-</div><span class="stat-dot" id="dot_T_p" style="background-color: black;"></span></div>
-                    <div class="stat-item"><div class="stat-label" data-tooltip="Unique">U<sub>A→C</sub></div><div class="stat-value" id="stat_U_p">-</div><span class="stat-dot" id="dot_U_p" style="background-color: green;"></span></div>
-                    <div class="stat-item"><div class="stat-label" data-tooltip="Indirect">Ind<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT_p">-</div><span class="stat-dot" id="dot_INT_p" style="background-color: transparent;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Total">Tot<sub>A→C</sub></div><div class="stat-value" id="stat_T_p">-</div><span class="stat-dot" id="dot_T_p" style="background-color: black;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Unique">Un<sub>A→C</sub></div><div class="stat-value" id="stat_U_p">-</div><span class="stat-dot" id="dot_U_p" style="background-color: green;"></span></div>
+                    <div class="stat-item"><div class="stat-label" data-tooltip="Indirect">Co<sub>A(B)→C</sub></div><div class="stat-value" id="stat_INT_p">-</div><span class="stat-dot" id="dot_INT_p" style="background-color: transparent;"></span></div>
                     <div class="stat-item"><div class="stat-label" data-tooltip="Additional">Ad<sub>A(B)→C</sub></div><div class="stat-value" id="stat_Ad_p">-</div><span class="stat-dot" id="dot_Ad_p" style="background-color: transparent;"></span></div>
                     <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #eee; font-size: 10px; color: #999; line-height: 1.4;">
-                        Liland, KH, Romano, R, Tomic, O, and Næs, T. Alternative definitions of effects in path analysis with multidimensional blocks.
+                        Liland, KH, Romano, R, Tomic, O, and Næs, T. Alternative ways of splitting sums of squares in multiblock regression with application in path analysis.
                     </div>
                 </div>
                 <div class="diagram" title="Directed Acyclic Graph relating the three blocks/variables.">
@@ -319,7 +319,7 @@
                 }
                 
                 if (EVs) {
-                    parts.push("⭕ <b>Contribution circles</b>: Displays circles for variance explained (T and U contributions) with contribution dots on respective vectors.");
+                    parts.push("⭕ <b>Contribution circles</b>: Displays circles for variance explained (Tot and Un contributions) with contribution dots on respective vectors.");
                 }
                 
                 explanation = parts.join("<br><br>");
